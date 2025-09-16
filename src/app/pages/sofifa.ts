@@ -4,8 +4,8 @@ import { FormsModule } from "@angular/forms";
 
 type SoFifaItem = {
   name: string;
-  rating: number;
-  potential: number;
+  rating: number | string;
+  potential: number | string;
   positions: string[];
 };
 
@@ -80,23 +80,24 @@ export class SoFifaPage {
     if (!query) return;
     this.loading = true;
     try {
-      // Expect a Netlify function deployed at /.netlify/functions/sofifa-search
-      const url = `/.netlify/functions/sofifa-search?keyword=${encodeURIComponent(query)}`;
+      const url = `/api/sofifa?keyword=${encodeURIComponent(query)}`;
       const res = await fetch(url, { headers: { accept: "application/json" } });
+      console.log(res);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (!Array.isArray(data?.results)) throw new Error("Formato inválido");
-      this.results = data.results.map((x: any) => ({
+      const arr = Array.isArray(data) ? data : data?.results;
+      if (!Array.isArray(arr)) throw new Error("Formato inválido");
+      this.results = arr.map((x: any) => ({
         name: String(x.name ?? ""),
-        rating: Number(x.rating ?? 0),
-        potential: Number(x.potential ?? 0),
+        rating: x.rating ?? x.overall ?? "",
+        potential: x.potential ?? "",
         positions: Array.isArray(x.positions)
           ? x.positions.map((p: any) => String(p))
           : [],
-      })) as SoFifaItem[];
+      }));
     } catch (e: any) {
       this.error =
-        "No se pudo consultar SoFIFA. Conectá Netlify y agregamos la función serverless.";
+        "No se pudo consultar SoFIFA. Se requiere un endpoint /api/sofifa en el servidor.";
     } finally {
       this.loading = false;
     }

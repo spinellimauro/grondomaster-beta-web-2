@@ -38,59 +38,86 @@ import { StateService } from "../services/state.service";
           [(ngModel)]="selectedDtId"
           name="selectedDtId"
         >
-          <option [ngValue]="null">Todos</option>
+          <option [ngValue]="null">Seleccioná DT</option>
           <option *ngFor="let dt of state.listaDTs()" [ngValue]="dt.id">
             {{ dt.nombreDT }} — {{ dt.nombreEquipo }}
           </option>
         </select>
       </div>
 
-      <div class="grid md:grid-cols-2 gap-4">
-        <div
-          *ngFor="let dt of filteredDTs()"
-          class="p-4 bg-white rounded-lg border border-slate-200 shadow"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-lg font-medium text-slate-800">
-                {{ dt.nombreDT }}
-                <span class="text-slate-500">— {{ dt.nombreEquipo }}</span>
+      <ng-container *ngIf="selectedDt() as dt; else emptyState">
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="p-4 bg-white rounded-lg border border-slate-200 shadow">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-lg font-medium text-slate-800">
+                  {{ dt.nombreDT }}
+                  <span class="text-slate-500">— {{ dt.nombreEquipo }}</span>
+                </div>
+                <div class="text-sm text-slate-600">
+                  Plata: <span>$</span>{{ dt.plata }} • Rank: {{ dt.rank }} •
+                  Slots: {{ dt.slots }} • Jugadores:
+                  {{ dt.listaJugadores.length }}
+                </div>
               </div>
-              <div class="text-sm text-slate-600">
-                Plata: <span>$</span>{{ dt.plata }} • Rank: {{ dt.rank }} •
-                Slots: {{ dt.slots }} • Jugadores:
-                {{ dt.listaJugadores.length }}
+            </div>
+            <div class="mt-3">
+              <div class="text-sm font-medium text-slate-700 mb-2">Jugadores</div>
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead>
+                    <tr class="text-left text-slate-600">
+                      <th class="py-1 pr-4">Jugador</th>
+                      <th class="py-1 pr-4">Nivel</th>
+                      <th class="py-1 pr-4">Potencial</th>
+                      <th class="py-1">Posición</th>
+                    </tr>
+                  </thead>
+                  <tbody class="text-slate-800">
+                    <tr
+                      *ngFor="let j of jugadoresDT(dt)"
+                      class="border-t border-slate-200"
+                    >
+                      <td class="py-1 pr-4">{{ j.nombre }}</td>
+                      <td class="py-1 pr-4">{{ j.nivel }}</td>
+                      <td class="py-1 pr-4">{{ j.potencial }}</td>
+                      <td class="py-1">{{ j.posiciones.join(", ") }}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
-          <div class="mt-3">
-            <div class="text-sm font-medium text-slate-700 mb-2">Jugadores</div>
-            <div class="overflow-x-auto">
+
+          <div class="p-4 bg-white rounded-lg border border-slate-200 shadow">
+            <div class="text-lg font-medium text-slate-800">Deshabilitados</div>
+            <div class="mt-3 overflow-x-auto">
               <table class="min-w-full text-sm">
                 <thead>
                   <tr class="text-left text-slate-600">
                     <th class="py-1 pr-4">Jugador</th>
                     <th class="py-1 pr-4">Nivel</th>
-                    <th class="py-1 pr-4">Potencial</th>
                     <th class="py-1">Posición</th>
                   </tr>
                 </thead>
                 <tbody class="text-slate-800">
-                  <tr
-                    *ngFor="let j of jugadoresDT(dt)"
-                    class="border-t border-slate-200"
-                  >
+                  <tr *ngFor="let j of deshabilitadosDT(dt)" class="border-t border-slate-200">
                     <td class="py-1 pr-4">{{ j.nombre }}</td>
                     <td class="py-1 pr-4">{{ j.nivel }}</td>
-                    <td class="py-1 pr-4">{{ j.potencial }}</td>
-                    <td class="py-1">{{ j.posiciones.join(", ") }}</td>
+                    <td class="py-1">{{ j.posiciones.join(', ') }}</td>
+                  </tr>
+                  <tr *ngIf="deshabilitadosDT(dt).length === 0">
+                    <td class="py-2 text-slate-500" colspan="3">Sin deshabilitados</td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </div>
         </div>
-      </div>
+      </ng-container>
+      <ng-template #emptyState>
+        <div class="text-sm text-slate-500">Seleccioná un DT para ver su equipo.</div>
+      </ng-template>
     </div>
   `,
 })
@@ -110,17 +137,21 @@ export class DTsPage {
     });
   }
 
+  selectedDt() {
+    const id = this.selectedDtId;
+    return id == null ? null : this.state.getDT(id) ?? null;
+  }
+
   jugadoresDT(dt: any) {
     return dt.listaJugadores
       .map((id: number) => this.state.getJugador(id))
       .filter((j: any) => !!j);
   }
 
-  filteredDTs() {
-    const ds = this.state.listaDTs();
-    return this.selectedDtId == null
-      ? ds
-      : ds.filter((d) => d.id === this.selectedDtId);
+  deshabilitadosDT(dt: any) {
+    return dt.listaJugadores
+      .map((id: number) => this.state.getJugador(id))
+      .filter((j: any) => !!j && j.habilitado === false);
   }
 
   onAdd(ev: Event) {
